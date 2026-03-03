@@ -1,6 +1,5 @@
 import React from 'react';
-import { UserInputs, OutfitType } from '../types';
-import { cn } from '../utils';
+import { UserInputs } from '../types';
 
 interface DesignFormProps {
   onSubmit: (inputs: UserInputs) => void;
@@ -8,135 +7,147 @@ interface DesignFormProps {
 }
 
 export const DesignForm: React.FC<DesignFormProps> = ({ onSubmit, isLoading }) => {
-  const [inputs, setInputs] = React.useState<UserInputs>({
-    fabricType: '',
-    color: '',
-    materialLength: '',
-    bodyType: '',
-    height: '',
-    occasion: '',
-    outfitType: 'complete',
-  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
+    const garmentType = (formData.get('garmentType') as string) || 'complete';
+    const fabric = (formData.get('fabric') as string) || 'cotton';
+    const color = (formData.get('color') as string) || '#8a2be2';
+    const occasion = (formData.get('occasion') as string) || 'casual';
+    const bodyType = (formData.get('bodyType') as string) || 'hourglass';
+    const heightStr = formData.get('height') as string;
+    const materialLengthStr = formData.get('materialLength') as string;
+
+    const heightCm = parseFloat(heightStr);
+    if (!heightStr || isNaN(heightCm) || heightCm <= 50 || heightCm >= 300) {
+      alert('Please enter a valid Height in cm (e.g. 165).');
+      return;
+    }
+
+    // Calculate required material
+    const reqTop = parseFloat((heightCm * 0.010).toFixed(1));
+    const reqBottom = parseFloat((heightCm * 0.012).toFixed(1));
+    let requiredMaterial = 0;
+    if (garmentType === 'top') requiredMaterial = reqTop;
+    else if (garmentType === 'bottom') requiredMaterial = reqBottom;
+    else requiredMaterial = parseFloat((reqTop + reqBottom).toFixed(1));
+
+    const materialLengthM = parseFloat(materialLengthStr);
+    const isMaterialProvided = !isNaN(materialLengthM) && materialLengthM > 0;
+
+    if (isMaterialProvided && materialLengthM < requiredMaterial * 0.8) {
+      alert(`Warning: For your height of ${heightCm}cm, a ${garmentType} typically requires at least ${requiredMaterial} meters. Your ${materialLengthM}m might constrain designs.`);
+    }
+
+    const inputs: UserInputs = {
+      outfitType: garmentType as UserInputs['outfitType'],
+      fabricType: fabric,
+      color: color,
+      occasion: occasion,
+      bodyType: bodyType,
+      height: heightStr,
+      materialLength: isMaterialProvided ? materialLengthStr : `${requiredMaterial}`,
+    };
+
     onSubmit(inputs);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setInputs(prev => ({ ...prev, [name]: value }));
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Outfit Type</label>
-          <div className="flex gap-2">
-            {(['top', 'bottom', 'complete'] as OutfitType[]).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setInputs(prev => ({ ...prev, outfitType: type }))}
-                className={cn(
-                  "flex-1 py-2 text-sm font-bold border-2 border-black transition-all capitalize",
-                  inputs.outfitType === type ? "bg-black text-white" : "bg-white text-black hover:bg-gray-50"
-                )}
-              >
-                {type}
-              </button>
-            ))}
+    <aside className="glass-panel form-panel slide-right">
+      <h2>Design Parameters</h2>
+      <p className="subtitle">Input details for AI magic.</p>
+
+      <form className="design-form" onSubmit={handleSubmit}>
+
+        <div className="form-section">
+          <h3>Basic Requirements</h3>
+          <div className="input-group">
+            <label htmlFor="garmentType">Garment Type</label>
+            <select id="garmentType" name="garmentType" required>
+              <option value="complete">Complete Outfit</option>
+              <option value="top">Top Only</option>
+              <option value="bottom">Bottom Only</option>
+            </select>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Fabric Type</label>
-          <input
-            required
-            name="fabricType"
-            value={inputs.fabricType}
-            onChange={handleChange}
-            placeholder="e.g. Cotton, Silk, Linen"
-            className="w-full p-2 border-2 border-black focus:outline-none focus:ring-0"
-          />
+        <div className="form-section">
+          <h3>Material &amp; Occasion</h3>
+          <div className="input-row">
+            <div className="input-group">
+              <label htmlFor="fabric">Fabric</label>
+              <select id="fabric" name="fabric">
+                <option value="cotton">Cotton</option>
+                <option value="silk">Silk</option>
+                <option value="linen">Linen</option>
+                <option value="crepe">Crepe</option>
+                <option value="satin">Satin</option>
+                <option value="denim">Denim</option>
+              </select>
+            </div>
+            <div className="input-group">
+              <label htmlFor="color">Primary Color</label>
+              <input type="color" id="color" name="color" defaultValue="#8a2be2" />
+            </div>
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="materialLength">Material Length (meters)</label>
+            <input
+              type="number"
+              id="materialLength"
+              name="materialLength"
+              step="0.1"
+              min="0"
+              placeholder="Optional (auto-calculated)"
+            />
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="occasion">Occasion</label>
+            <select id="occasion" name="occasion" required>
+              <option value="casual">Casual / Work</option>
+              <option value="party">Party / Evening</option>
+              <option value="wedding">Wedding / Festive</option>
+              <option value="formal">Business Formal</option>
+              <option value="beach">Vacation / Resort</option>
+            </select>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Color</label>
-          <input
-            required
-            name="color"
-            value={inputs.color}
-            onChange={handleChange}
-            placeholder="e.g. Emerald Green, Pastel Pink"
-            className="w-full p-2 border-2 border-black focus:outline-none focus:ring-0"
-          />
+        <div className="form-section">
+          <h3>Body Profile</h3>
+          <div className="input-row">
+            <div className="input-group">
+              <label htmlFor="bodyType">Body Type</label>
+              <select id="bodyType" name="bodyType">
+                <option value="hourglass">Hourglass</option>
+                <option value="pear">Pear</option>
+                <option value="apple">Apple</option>
+                <option value="rectangle">Rectangle</option>
+                <option value="inverted">Inverted Triangle</option>
+              </select>
+            </div>
+            <div className="input-group">
+              <label htmlFor="height">Height (cm)</label>
+              <input type="number" id="height" name="height" placeholder="e.g. 165" />
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Material Length</label>
-          <input
-            required
-            name="materialLength"
-            value={inputs.materialLength}
-            onChange={handleChange}
-            placeholder="e.g. 2.5 meters"
-            className="w-full p-2 border-2 border-black focus:outline-none focus:ring-0"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Body Type</label>
-          <select
-            required
-            name="bodyType"
-            value={inputs.bodyType}
-            onChange={handleChange}
-            className="w-full p-2 border-2 border-black focus:outline-none focus:ring-0 bg-white"
-          >
-            <option value="">Select Body Type</option>
-            <option value="Hourglass">Hourglass</option>
-            <option value="Pear">Pear</option>
-            <option value="Apple">Apple</option>
-            <option value="Rectangle">Rectangle</option>
-            <option value="Inverted Triangle">Inverted Triangle</option>
-            <option value="Athletic">Athletic</option>
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Height</label>
-          <input
-            required
-            name="height"
-            value={inputs.height}
-            onChange={handleChange}
-            placeholder="e.g. 5'6 or 168cm"
-            className="w-full p-2 border-2 border-black focus:outline-none focus:ring-0"
-          />
-        </div>
-
-        <div className="space-y-2 md:col-span-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Occasion</label>
-          <input
-            required
-            name="occasion"
-            value={inputs.occasion}
-            onChange={handleChange}
-            placeholder="e.g. Wedding, Formal Meeting, Casual Brunch"
-            className="w-full p-2 border-2 border-black focus:outline-none focus:ring-0"
-          />
-        </div>
-      </div>
-
-      <button
-        disabled={isLoading}
-        type="submit"
-        className="w-full brutal-btn bg-black text-white py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isLoading ? 'GENERATING DESIGNS...' : 'DESIGN MY OUTFIT'}
-      </button>
-    </form>
+        <button type="submit" className="primary-btn glow-effect mt-4" disabled={isLoading}>
+          <span>{isLoading ? 'Generating Designs...' : 'Generate Designs'}</span>
+          {!isLoading && (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          )}
+        </button>
+      </form>
+    </aside>
   );
 };

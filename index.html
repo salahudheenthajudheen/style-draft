@@ -1,57 +1,53 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-    <script>
-      (function() {
-        // Prevent formdata-polyfill from running its monkey-patching logic
-        if (typeof window.FormData !== 'undefined' && !window.FormData.prototype.keys) {
-          window.FormData.prototype.keys = function*() {};
-        }
-        // Polyfill global for libraries that expect it, using a proxy to ignore 
-        // attempts to overwrite read-only properties like fetch.
-        const globalProxy = new Proxy(window, {
-          set(target, prop, value) {
-            if (prop === 'fetch') {
-              console.warn('Attempt to overwrite fetch ignored');
-              return true;
-            }
-            try {
-              target[prop] = value;
-            } catch (e) {
-              // Ignore other read-only property errors
-            }
-            return true;
-          },
-          get(target, prop) {
-            const val = target[prop];
-            if (typeof val === 'function') {
-              // Bind functions to window to ensure they work correctly
-              // but avoid binding constructors which can fail
-              if (val.prototype) return val;
-              return val.bind(target);
-            }
-            return val;
-          }
-        });
-        window.global = globalProxy;
-        // Try to redefine globalThis if possible
-        try {
-          Object.defineProperty(window, 'globalThis', {
-            get() { return globalProxy; },
-            configurable: true
-          });
-        } catch (e) {
-          // If we can't redefine globalThis, we rely on Vite's define
-        }
-      })();
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
 
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Style Draft | AI-Assisted Smart Outfit Designer</title>
+  <meta name="description"
+    content="Style Draft - AI-Assisted Smart Outfit Designer. Design unique outfits, experiment with color palettes, and draft your signature look seamlessly." />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <script>
+    (function () {
+      if (typeof window.FormData !== 'undefined' && !window.FormData.prototype.keys) {
+        window.FormData.prototype.keys = function* () { };
+      }
+      const globalProxy = new Proxy(window, {
+        set(target, prop, value) {
+          if (prop === 'fetch') {
+            console.warn('Attempt to overwrite fetch ignored');
+            return true;
+          }
+          try {
+            target[prop] = value;
+          } catch (e) { }
+          return true;
+        },
+        get(target, prop) {
+          const val = target[prop];
+          if (typeof val === 'function') {
+            if (val.prototype) return val;
+            return val.bind(target);
+          }
+          return val;
+        }
+      });
+      window.global = globalProxy;
+      try {
+        Object.defineProperty(window, 'globalThis', {
+          get() { return globalProxy; },
+          configurable: true
+        });
+      } catch (e) { }
+    })();
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>
