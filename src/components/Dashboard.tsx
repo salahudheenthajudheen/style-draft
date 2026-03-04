@@ -4,13 +4,16 @@ import { RecommendationCard } from './RecommendationCard';
 import { TrendingSidebar } from './TrendingSidebar';
 import { UserInputs, DesignRecommendation, SavedDesign } from '../types';
 import { generateRecommendations } from '../services/gemini';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
 
 interface DashboardProps {
     username: string;
     onLogout: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ username }) => {
+    const { user, signOut } = useAuth();
     const [recommendations, setRecommendations] = React.useState<DesignRecommendation[]>([]);
     const [isLoading, setIsLoading] = React.useState(false);
     const [savedDesigns, setSavedDesigns] = React.useState<SavedDesign[]>([]);
@@ -21,14 +24,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
     const [showImageModal, setShowImageModal] = React.useState(false);
     const [modalImage, setModalImage] = React.useState({ src: '', title: '' });
     const [settingsSuccess, setSettingsSuccess] = React.useState(false);
+    const [isSavingDesigns, setIsSavingDesigns] = React.useState(false);
 
     const profileRef = React.useRef<HTMLDivElement>(null);
 
-    // Load saved designs from localStorage
+    // Load saved designs from Supabase on mount
     React.useEffect(() => {
-        const saved = localStorage.getItem('style-draft-saved');
-        if (saved) setSavedDesigns(JSON.parse(saved));
-    }, []);
+        if (!user) return;
+        const fetchDesigns = async () => {
+            const { data, error } = await supabase
+                .from('saved_designs')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Failed to load saved designs:', error);
+                return;
+            }
+
+            if (data) {
+                const designs: SavedDesign[] = data.map((row: any) => ({
+                    id: row.id,
+                    title: row.title,
+                    description: row.description || '',
+                    neckDesign: row.neck_design || undefined,
+                    sleevePattern: row.sleeve_pattern || undefined,
+                    garmentCut: row.garment_cut,
+                    layoutStyle: row.layout_style,
+                    trendingNotes: row.trending_notes || '',
+                    svgLayout: row.svg_layout || '',
+                    imageUrl: row.image_url || undefined,
+                    inputs: {
+                        fabricType: row.fabric_type || '',
+                        color: row.color || '',
+                        materialLength: row.material_length || '',
+                        bodyType: row.body_type || '',
+                        height: row.height || '',
+                        occasion: row.occasion || '',
+                        outfitType: row.outfit_type || 'complete',
+                    },
+                    createdAt: new Date(row.created_at).getTime(),
+                }));
+                setSavedDesigns(designs);
+            }
+        };
+        fetchDesigns();
+    }, [user]);
 
     // Close dropdown on outside click
     React.useEffect(() => {
@@ -56,25 +97,74 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
         }
     };
 
-    const handleSave = (rec: DesignRecommendation) => {
-        if (!currentInputs) return;
+    const handleSave = async (rec: DesignRecommendation) => {
+        if (!currentInputs || !user) return;
 
         const isAlreadySaved = savedDesigns.some(d => d.id === rec.id);
+
         if (isAlreadySaved) {
-            const updated = savedDesigns.filter(d => d.id !== rec.id);
-            setSavedDesigns(updated);
-            localStorage.setItem('style-draft-saved', JSON.stringify(updated));
+            // Delete from Supabase
+            setIsSavingDesigns(true);
+            const { error } = await supabase
+                .from('saved_designs')
+                .delete()
+                .eq('id', rec.id);
+
+            if (error) {
+                console.error('Failed to delete design:', error);
+            } else {
+                setSavedDesigns(prev => prev.filter(d => d.id !== rec.id));
+            }
+            setIsSavingDesigns(false);
             return;
         }
 
-        const newSaved: SavedDesign = {
-            ...rec,
-            inputs: currentInputs,
-            createdAt: Date.now(),
-        };
-        const updated = [newSaved, ...savedDesigns];
-        setSavedDesigns(updated);
-        localStorage.setItem('style-draft-saved', JSON.stringify(updated));
+        // Insert into Supabase
+        setIsSavingDesigns(true);
+        const { data, error } = await supabase
+            .from('saved_designs')
+            .insert({
+                user_id: user.id,
+                title: rec.title,
+                description: rec.description,
+                neck_design: rec.neckDesign || null,
+                sleeve_pattern: rec.sleevePattern || null,
+                garment_cut: rec.garmentCut,
+                layout_style: rec.layoutStyle,
+                trending_notes: rec.trendingNotes,
+                svg_layout: rec.svgLayout,
+                image_url: rec.imageUrl || null,
+                fabric_type: currentInputs.fabricType,
+                color: currentInputs.color,
+                material_length: currentInputs.materialLength,
+                body_type: currentInputs.bodyType,
+                height: currentInputs.height,
+                occasion: currentInputs.occasion,
+                outfit_type: currentInputs.outfitType,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Failed to save design:', error);
+        } else if (data) {
+            const newSaved: SavedDesign = {
+                id: data.id,
+                title: data.title,
+                description: data.description || '',
+                neckDesign: data.neck_design || undefined,
+                sleevePattern: data.sleeve_pattern || undefined,
+                garmentCut: data.garment_cut,
+                layoutStyle: data.layout_style,
+                trendingNotes: data.trending_notes || '',
+                svgLayout: data.svg_layout || '',
+                imageUrl: data.image_url || undefined,
+                inputs: currentInputs,
+                createdAt: new Date(data.created_at).getTime(),
+            };
+            setSavedDesigns(prev => [newSaved, ...prev]);
+        }
+        setIsSavingDesigns(false);
     };
 
     const handleTrendClick = (img: string, title: string) => {
@@ -89,6 +179,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
             setSettingsSuccess(false);
             setShowSettingsModal(false);
         }, 1500);
+    };
+
+    const handleLogout = async () => {
+        await signOut();
     };
 
     const avatarLetter = username ? username.charAt(0).toUpperCase() : 'U';
@@ -121,6 +215,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
                         <div className="profile-dropdown">
                             <div className="dropdown-header">
                                 <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{username}</span>
+                                {user?.email && (
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.2rem' }}>{user.email}</span>
+                                )}
                             </div>
                             <div className="dropdown-divider"></div>
                             <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); setShowSettingsModal(true); }}>
@@ -137,7 +234,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
                                 My Saved Designs
                             </button>
                             <div className="dropdown-divider"></div>
-                            <button className="dropdown-item logout-btn" onClick={onLogout}>
+                            <button className="dropdown-item logout-btn" onClick={handleLogout}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                                     <polyline points="16 17 21 12 16 7"></polyline>
@@ -194,7 +291,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
                                                     key={rec.id}
                                                     recommendation={rec}
                                                     onSave={handleSave}
-                                                    isSaved={savedDesigns.some(d => d.id === rec.id)}
+                                                    isSaved={savedDesigns.some(d => d.title === rec.title && d.description === rec.description)}
                                                 />
                                             ))}
                                         </div>
@@ -276,8 +373,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
                             )}
 
                             <div className="input-group">
-                                <label htmlFor="updateUsername">Username</label>
-                                <input type="text" id="updateUsername" name="updateUsername" defaultValue={username} required autoComplete="off" />
+                                <label htmlFor="updateEmail">Email</label>
+                                <input type="email" id="updateEmail" name="updateEmail" defaultValue={user?.email || ''} disabled style={{ opacity: 0.6 }} />
                             </div>
 
                             <div className="input-group">

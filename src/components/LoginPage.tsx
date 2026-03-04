@@ -1,47 +1,74 @@
 import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LoginPageProps {
-    onLogin: (username: string) => void;
+    onLogin: () => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+    const { signIn, signUp } = useAuth();
     const [showSignup, setShowSignup] = React.useState(false);
     const [loginError, setLoginError] = React.useState('');
     const [signupError, setSignupError] = React.useState('');
+    const [signupSuccess, setSignupSuccess] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
 
-    const handleLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoginError('');
         const formData = new FormData(e.currentTarget);
-        const username = formData.get('email') as string;
+        const email = (formData.get('email') as string).trim();
+        const password = formData.get('password') as string;
 
-        if (!username) {
-            setLoginError('Please enter a username.');
+        if (!email) {
+            setLoginError('Please enter your email.');
+            return;
+        }
+        if (!password) {
+            setLoginError('Please enter your password.');
             return;
         }
 
         setIsLoading(true);
-        setTimeout(() => {
-            onLogin(username);
-        }, 800);
+        const { error } = await signIn(email, password);
+        setIsLoading(false);
+
+        if (error) {
+            setLoginError(error.message);
+        }
+        // Auth state change handled by AuthContext → App will redirect automatically
     };
 
-    const handleSignupSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSignupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setSignupError('');
+        setSignupSuccess('');
         const formData = new FormData(e.currentTarget);
-        const username = formData.get('signupUsername') as string;
+        const email = (formData.get('signupEmail') as string).trim();
+        const password = formData.get('signupPassword') as string;
 
-        if (!username) {
-            setSignupError('Please enter a username.');
+        if (!email) {
+            setSignupError('Please enter your email.');
+            return;
+        }
+        if (!password || password.length < 6) {
+            setSignupError('Password must be at least 6 characters.');
             return;
         }
 
         setIsLoading(true);
-        setTimeout(() => {
-            onLogin(username);
-        }, 800);
+        const { error } = await signUp(email, password);
+        setIsLoading(false);
+
+        if (error) {
+            setSignupError(error.message);
+        } else {
+            setSignupSuccess('Account created! You can now sign in.');
+            setTimeout(() => {
+                setShowSignup(false);
+                setSignupSuccess('');
+            }, 2000);
+        }
     };
 
     return (
@@ -67,14 +94,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                                 <div className="auth-error">{loginError}</div>
                             )}
                             <div className="input-group">
-                                <label htmlFor="email">Username</label>
+                                <label htmlFor="email">Email</label>
                                 <input
-                                    type="text"
+                                    type="email"
                                     id="email"
                                     name="email"
-                                    placeholder="Enter your username"
+                                    placeholder="Enter your email"
                                     required
-                                    autoComplete="off"
+                                    autoComplete="email"
                                 />
                             </div>
 
@@ -108,7 +135,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                                 )}
                             </button>
                             <div className="signup-prompt">
-                                <p>New to Style Draft? <a onClick={(e) => { e.preventDefault(); setShowSignup(true); }}>Create an account</a></p>
+                                <p>New to Style Draft? <a onClick={(e) => { e.preventDefault(); setShowSignup(true); setLoginError(''); }}>Create an account</a></p>
                             </div>
                         </form>
                     )}
@@ -119,15 +146,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                             {signupError && (
                                 <div className="auth-error">{signupError}</div>
                             )}
+                            {signupSuccess && (
+                                <div className="auth-success">{signupSuccess}</div>
+                            )}
                             <div className="input-group">
-                                <label htmlFor="signupUsername">Choose Username</label>
+                                <label htmlFor="signupEmail">Email</label>
                                 <input
-                                    type="text"
-                                    id="signupUsername"
-                                    name="signupUsername"
-                                    placeholder="Enter a unique username"
+                                    type="email"
+                                    id="signupEmail"
+                                    name="signupEmail"
+                                    placeholder="Enter your email"
                                     required
-                                    autoComplete="off"
+                                    autoComplete="email"
                                 />
                             </div>
 
@@ -137,8 +167,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                                     type="password"
                                     id="signupPassword"
                                     name="signupPassword"
-                                    placeholder="Enter your password"
+                                    placeholder="Min. 6 characters"
                                     required
+                                    minLength={6}
                                 />
                             </div>
 
@@ -154,7 +185,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                                 )}
                             </button>
                             <div className="signup-prompt">
-                                <p>Already have an account? <a onClick={(e) => { e.preventDefault(); setShowSignup(false); }}>Sign in here</a></p>
+                                <p>Already have an account? <a onClick={(e) => { e.preventDefault(); setShowSignup(false); setSignupError(''); setSignupSuccess(''); }}>Sign in here</a></p>
                             </div>
                         </form>
                     )}
