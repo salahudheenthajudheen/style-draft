@@ -172,13 +172,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ username }) => {
         setShowImageModal(true);
     };
 
-    const handleSettingsSubmit = (e: React.FormEvent) => {
+    const [settingsError, setSettingsError] = React.useState<string | null>(null);
+
+    const handleSettingsSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSettingsSuccess(true);
-        setTimeout(() => {
-            setSettingsSuccess(false);
-            setShowSettingsModal(false);
-        }, 1500);
+        setSettingsError(null);
+        setSettingsSuccess(false);
+
+        const form = e.target as HTMLFormElement;
+        const passwordInput = form.elements.namedItem('updatePassword') as HTMLInputElement;
+        const newPassword = passwordInput.value;
+
+        if (!newPassword) {
+            setSettingsError('Please enter a new password.');
+            return;
+        }
+
+        const { error } = await supabase.auth.updateUser({
+            password: newPassword
+        });
+
+        if (error) {
+            setSettingsError(error.message);
+        } else {
+            setSettingsSuccess(true);
+            passwordInput.value = ''; // clear the input
+            setTimeout(() => {
+                setSettingsSuccess(false);
+                setShowSettingsModal(false);
+            }, 1500);
+        }
     };
 
     const handleLogout = async () => {
@@ -368,6 +391,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ username }) => {
                         </div>
 
                         <form className="settings-form" onSubmit={handleSettingsSubmit}>
+                            {settingsError && (
+                                <div className="auth-error">{settingsError}</div>
+                            )}
                             {settingsSuccess && (
                                 <div className="auth-success">Profile successfully updated.</div>
                             )}
