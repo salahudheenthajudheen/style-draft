@@ -824,16 +824,35 @@ input[type="color"] {
 }
 
 @keyframes loadProgress {
-    0% { width: 0%; }
-    20% { width: 30%; }
-    50% { width: 45%; }
-    80% { width: 85%; }
-    100% { width: 100%; }
+    0% {
+        width: 0%;
+    }
+
+    20% {
+        width: 30%;
+    }
+
+    50% {
+        width: 45%;
+    }
+
+    80% {
+        width: 85%;
+    }
+
+    100% {
+        width: 100%;
+    }
 }
 
 @keyframes gradientShift {
-    0% { background-position: 100% 0; }
-    100% { background-position: -100% 0; }
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: -100% 0;
+    }
 }
 
 /* Dashboard Animations */
@@ -1189,6 +1208,7 @@ input[type="color"] {
         grid-template-columns: 1fr 1fr;
         padding: 1.5rem;
     }
+
     .trending-panel {
         grid-column: 1 / -1;
     }
@@ -1199,6 +1219,7 @@ input[type="color"] {
         grid-template-columns: 1fr;
         padding: 1rem;
     }
+
     .glass-navbar {
         padding: 1rem 1.5rem;
     }
@@ -1273,4 +1294,185 @@ input[type="color"] {
 /* Logout color override */
 .logout-btn {
     color: #d9534f !important;
+}
+
+/* ========================================= */
+/* ----- Mobile Responsiveness Overrides ----- */
+/* ========================================= */
+
+@media (max-width: 1024px) {
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+        /* Stack everything on tablets/smaller */
+        gap: 1.5rem;
+        padding: 1.5rem;
+    }
+
+    .form-panel,
+    .results-panel {
+        position: static;
+        /* Remove sticky positioning */
+        height: auto;
+    }
+
+    .trending-panel {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .landing-title {
+        font-size: 4rem;
+    }
+}
+
+@media (max-width: 768px) {
+
+    /* Base typography adjustments */
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    .glass-panel {
+        padding: 1.5rem;
+        border-radius: 16px;
+    }
+
+    /* Landing Page Mobile */
+    .landing-title {
+        font-size: 3rem;
+    }
+
+    .landing-description {
+        font-size: 1rem;
+    }
+
+    .landing-nav {
+        padding: 1rem 1.5rem;
+        justify-content: center;
+        /* Center logo on mobile */
+    }
+
+    .landing-content {
+        padding: 1rem 1.5rem 3rem;
+    }
+
+    .landing-cta-btn {
+        width: 100%;
+        padding: 1rem 1.5rem;
+    }
+
+    /* Login Page Mobile */
+    .login-container {
+        padding: 1rem 1.5rem;
+    }
+
+    .form-options {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    /* Dashboard Navbar Mobile */
+    .glass-navbar {
+        padding: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: space-between;
+    }
+
+    .nav-links {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        gap: 1.5rem;
+    }
+
+    /* Dashboard Grid & Panels */
+    .dashboard-layout {
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .input-row {
+        grid-template-columns: 1fr;
+        /* Stack inputs on mobile */
+        gap: 1rem;
+    }
+
+    .canvas-area {
+        padding: 1rem;
+        min-height: 300px;
+    }
+
+    .draft-gallery {
+        grid-template-columns: 1fr;
+        /* 1 card per row on mobile */
+        gap: 1.5rem;
+    }
+
+    .results-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .view-toggles {
+        width: 100%;
+        display: flex;
+    }
+
+    .toggle-btn {
+        flex: 1;
+        /* Stretch toggles */
+        text-align: center;
+        padding: 0.75rem;
+    }
+
+    .trending-panel {
+        grid-template-columns: 1fr;
+        /* Stack trending items */
+    }
+
+    .trend-item {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .trend-item img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+    }
+
+    /* Modals Mobile */
+    .modal-content {
+        width: 95%;
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+
+    /* Small Phone adjustments */
+    .landing-title {
+        font-size: 2.5rem;
+    }
+
+    .avatar {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+
+    .profile-dropdown {
+        right: -10px;
+        /* Adjust dropdown position for small screens */
+        min-width: 200px;
+    }
 }
